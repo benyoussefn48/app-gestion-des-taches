@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_tasks
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: tasksdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - microservices-network
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    depends_on:
+      - mysql
+    environment:
+      PORT: 4001
+      DB_HOST: mysql
+      DB_PORT: 3306  # CHANGED from 3307 to 3306 (internal Docker network)
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: tasksdb
+      JWT_SECRET: supersecret_jwt_key
+    ports:
+      - "4003:4001"  # CHANGED from 4001 to 4003
+    networks:
+      - microservices-network
+
+  task-service:
+    build: ./task-service
+    container_name: task-service
+    depends_on:
+      - mysql
+    environment:
+      PORT: 4002
+      DB_HOST: mysql
+      DB_PORT: 3306  # CHANGED from 3307 to 3306 (internal Docker network)
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: tasksdb
+    ports:
+      - "4002:4002"  # This one was working, keep it
+    networks:
+      - microservices-network
+
+  api-gateway:
+    build: ./gateway
+    container_name: api-gateway
+    depends_on:
+      - auth-service
+      - task-service
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:4001
+      TASK_SERVICE_URL: http://task-service:4002
+      PORT: 8000
+    ports:
+      - "8000:8000"  # CHANGED from 8000 to 8001
+    networks:
+      - microservices-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend-app
+    depends_on:
+      - api-gateway
+    ports:
+      - "3000:80"
+    networks:
+      - microservices-network
+
+volumes:
+  mysql_data:
+
+networks:
+  microservices-network:
+    driver: bridge

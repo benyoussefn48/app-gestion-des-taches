@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Microservices Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { margin: 10px; padding: 10px; }
+        pre { background: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Microservices Direct Test</h1>
+    
+    <button onclick="testGateway()">Test API Gateway</button>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testTasks()">Test Tasks</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function testGateway() {
+            const res = await fetch('http://localhost:8000/health');
+            const data = await res.json();
+            document.getElementById('result').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+        
+        async function testLogin() {
+            const res = await fetch('http://localhost:8000/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: 'alice@example.com',
+                    password: 'anything'
+                })
+            });
+            const data = await res.json();
+            localStorage.setItem('token', data.token);
+            document.getElementById('result').innerHTML = `<pre>Login Success! Token saved.</pre>`;
+        }
+        
+        async function testTasks() {
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:8000/api/tasks', {
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const tasks = await res.json();
+            document.getElementById('result').innerHTML = `<pre>Tasks: ${JSON.stringify(tasks, null, 2)}</pre>`;
+        }
+    </script>
+</body>
+</html>
